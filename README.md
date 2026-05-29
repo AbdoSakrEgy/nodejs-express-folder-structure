@@ -6,14 +6,14 @@ A clean, scalable, production-ready backend starter template designed for reuse 
 
 ```bash
 # 1. Clone and install
-npm install
+pnpm install
 
 # 2. Set up environment variables
 cp .env.example .env
 # Edit .env with your actual values
 
 # 3. Start development server
-npm run dev
+pnpm dev
 
 # 4. Verify it works
 curl http://localhost:5000/api/v1/health
@@ -137,10 +137,10 @@ Route → Middleware → Controller → Service → Model
 
 | Script | Description |
 |--------|-------------|
-| `npm run dev` | Start dev server with hot reload (tsx watch) |
-| `npm run build` | Compile TypeScript to JavaScript |
-| `npm start` | Run compiled production build |
-| `npm run lint` | Type-check without emitting files |
+| `pnpm dev` | Start dev server with hot reload (tsx watch) |
+| `pnpm build` | Compile TypeScript to JavaScript |
+| `pnpm start` | Run compiled production build |
+| `pnpm lint` | Type-check without emitting files |
 
 ## 🔒 Security Features
 

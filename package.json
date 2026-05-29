@@ -1,5 +1,5 @@
 {
-  "name": "folder-structure",
+  "name": "nodejs-express-folder-structure",
   "version": "1.0.0",
   "description": "Production-ready Node.js + Express + TypeScript backend starter template",
   "type": "module",

@@ -3,8 +3,8 @@ import app from "./app.js";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import { connectDatabase } from "./DB/database.js";
-import { SocketManager } from "./shared/utils/socketio/socketio.js";
 import { registerJobs } from "./shared/jobs/register.jobs.js";
+import { socketIoServer } from "./shared/utils/socketio/socket.io.server.js";
 
 /**
  * Server entry point.
@@ -17,44 +17,17 @@ import { registerJobs } from "./shared/jobs/register.jobs.js";
  * without binding to a port.
  */
 
+// ======================= create server =======================
 const server = http.createServer(app);
 
-// ========================
-// Socket.IO
-// ========================
-export const io = new SocketManager({
-  cors: {
-    origin: env.CORS_ORIGIN,
-    credentials: true,
-  },
-  logger,
-  // authHandler: async (socket) => {
-  //   const token =
-  //     socket.handshake.auth?.token ||
-  //     socket.handshake.headers?.authorization;
-  //   if (!token) throw new Error("Authentication required");
-  //   const decoded = decodeToken(token); // your auth logic
-  //   return { userId: decoded.id, role: decoded.role };
-  // },
-});
-
-io.attach(server);
-
-// Register project-specific socket handlers:
-// io.onConnection((socket, server) => {
-//   registerChatEvents(socket, io);
-//   registerOrderEvents(socket, io);
-// });
-
+// ======================= startServer =======================
 const startServer = async (): Promise<void> => {
   try {
-    // Connect to database
+    // 1. Connect to database
     await connectDatabase();
-
-    // Register cron jobs
+    // 2. Run all cron jobs
     registerJobs();
-
-    // Start listening
+    // 3. Start listening
     server.listen(env.PORT, () => {
       logger.info(`🚀 Server running on port ${env.PORT} [${env.NODE_ENV}]`);
       logger.info(
@@ -66,11 +39,12 @@ const startServer = async (): Promise<void> => {
     process.exit(1);
   }
 };
+startServer();
 
-// ========================
-// Graceful Shutdown
-// ========================
+// ======================= socketIoServer =======================
+socketIoServer(server);
 
+// ======================= gracefulShutdown =======================
 /**
  * Graceful shutdown handler.
  *
@@ -85,32 +59,24 @@ const startServer = async (): Promise<void> => {
  */
 const gracefulShutdown = (signal: string): void => {
   logger.info(`${signal} received — starting graceful shutdown`);
-
   server.close(() => {
     logger.info("HTTP server closed");
-
     // Close database connection here:
     // await mongoose.connection.close();
     // await prisma.$disconnect();
-
     logger.info("All connections closed — process exiting");
     process.exit(0);
   });
-
   // Force shutdown after 10 seconds if connections hang
   setTimeout(() => {
     logger.error("Forced shutdown — connections did not close in time");
     process.exit(1);
   }, 10_000);
 };
-
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
-// ========================
-// Unhandled Error Safety Nets
-// ========================
-
+// ======================= unhandledRejection =======================
 /**
  * Last-resort handlers for unhandled rejections and uncaught exceptions.
  *
@@ -122,10 +88,8 @@ process.on("unhandledRejection", (reason: unknown) => {
   // In production, you might want to gracefully restart
 });
 
+// ======================= uncaughtException =======================
 process.on("uncaughtException", (error: Error) => {
   logger.fatal(error, "Uncaught Exception — process must exit");
   process.exit(1);
 });
-
-// Start the server
-startServer();

@@ -1,4 +1,5 @@
-import { Secret, sign, SignOptions, verify } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
+import type { Secret, SignOptions } from "jsonwebtoken";
 import { AuthPayload, MyJwtPayload } from "../types/jwt.types.js";
 import { generateOtp } from "./generate.otp.js";
 import { env } from "../../config/env.js";
@@ -9,7 +10,7 @@ export const createJwt = (
   privateKey: Secret,
   options?: SignOptions,
 ) => {
-  const token = sign(payload, privateKey, options);
+  const token = jwt.sign(payload, privateKey, options);
   return token;
 };
 
@@ -21,7 +22,7 @@ export const verifyJwt = ({
   token: string;
   privateKey: Secret;
 }): MyJwtPayload => {
-  const payload = verify(token, privateKey) as MyJwtPayload; // result || error
+  const payload = jwt.verify(token, privateKey) as MyJwtPayload; // result || error
   return payload;
 };
 

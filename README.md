@@ -24,24 +24,25 @@ curl http://localhost:5000/api/v1/health
 ```
 src/
 ├── app.ts                          # Express app configuration (middleware, routes)
-├── server.ts                       # Server lifecycle (startup, shutdown, sockets)
+├── server.ts                       # Server entry point & lifecycle (sockets, crons, shutdown)
 │
-├── common/                         # Shared types, constants, enums
-│   ├── types.ts                    # Global TypeScript interfaces
-│   └── constants.ts                # App-wide magic numbers & values
+├── DB/                             # Database layer
+│   └── database.ts                 # Database connection setup
 │
 ├── config/                         # Configuration & environment
-│   ├── env.ts                      # Centralized environment variables
-│   ├── logger.ts                   # Pino logger setup
-│   └── database.ts                 # Database connection
+│   ├── env.ts                      # Centralized environment variables validation & retrieval
+│   └── logger.ts                   # Pino logger setup for structured logging
 │
-├── middlewares/                     # Express middleware
-│   ├── auth.middleware.ts           # JWT authentication
-│   ├── authorization.middleware.ts  # Role-based access control
-│   ├── validator.middleware.ts      # Zod request validation
-│   ├── limiter.middleware.ts        # Rate limiting
-│   ├── error.middleware.ts          # Global error handler
-│   └── request-logger.middleware.ts # HTTP request logging
+├── middlewares/                    # Express middlewares
+│   ├── authenticate.ts             # JWT authentication middleware
+│   ├── authorize.ts                # Role-based access control middleware
+│   ├── handle.global.error.ts      # Global Express error handler middleware
+│   ├── handle.route.not.found.ts   # 404 handler middleware
+│   ├── limit.auth.requests.ts      # Rate limiter for auth endpoints
+│   ├── limit.requests.ts           # Global rate limiter
+│   ├── log.requests.ts             # HTTP request logging middleware (morgan)
+│   ├── multer.upload.ts            # Multer file upload setup
+│   └── validate.ts                 # Zod request validation middleware
 │
 ├── modules/                        # Feature modules (domain-driven)
 │   ├── auth/                       # Authentication module
@@ -63,31 +64,46 @@ src/
 │   └── health/                     # Health check endpoint
 │       └── health.route.ts
 │
-├── utils/                          # Reusable utilities
-│   ├── bcrypt.ts                   # Password hashing
-│   ├── jwt.ts                      # JWT sign/verify
-│   ├── crypto.ts                   # AES encryption
-│   ├── create-otp.ts               # Secure OTP generation
-│   ├── decode-token.ts             # JWT decode (without verify)
-│   ├── error/                      # Error classes & handlers
-│   │   ├── app.error.ts            # AppError + subclasses
-│   │   ├── async-handler.ts        # Async route wrapper
-│   │   ├── error-handler.ts        # Non-Express error handler
-│   │   └── not.found.error.ts      # 404 route handler
-│   ├── response/                   # API response helpers
-│   │   ├── http-status-code.ts     # HTTP status constants
-│   │   └── response-handler.ts     # Standardized response builder
-│   ├── cloudinary/                 # Cloud image uploads
-│   ├── multer/                     # File upload config
-│   ├── send-email/                 # Email service
-│   ├── socketio/                   # Socket.IO setup
-│   └── paymob/                     # Payment integration
-│
-├── jobs/                           # Scheduled cron jobs
-│   └── job1.node.cron.ts
-│
-└── tests/                          # Test files
+└── shared/                         # Shared across modules (types, utils, jobs, tests)
+    ├── jobs/                       # Scheduled cron jobs
+    │   └── register.jobs.ts        # Register and configure all cron jobs
+    ├── tests/                      # Testing helpers/infrastructure
+    ├── types/                      # Shared TS Types
+    │   ├── decode.token.types.ts
+    │   ├── jwt.types.ts
+    │   ├── multer.upload.types.ts
+    │   ├── paymob.types.ts
+    │   ├── shared.types.ts
+    │   └── socketio.types.ts
+    └── utils/                      # Shared utility functions
+        ├── bcrypt.ts               # Password hashing helper
+        ├── cloudinary/             # Cloudinary configuration & service
+        │   ├── cloudinary.config.ts
+        │   └── cloudinary.service.ts
+        ├── crypto.ts               # AES encryption/decryption
+        ├── decode.token.ts         # JWT decode (without verification)
+        ├── error/                  # Custom error classes & helpers
+        │   ├── app.error.ts        # AppError + subclasses
+        │   └── async.handler.ts    # Async router wrapper
+        ├── generate.otp.ts         # Secure OTP generator
+        ├── jwt.ts                  # JWT sign/verify
+        ├── paymob/                 # Paymob integration configuration & service
+        │   ├── paymob.config.ts
+        │   └── paymob.service.ts
+        ├── response/               # Standardized response handlers
+        │   ├── http.status.code.ts # HTTP status constants
+        │   └── response.handler.ts # Standardized response builder
+        ├── send-email/             # Email templates and sender service
+        │   ├── generate.HTML.ts
+        │   └── send.email.ts
+        ├── socketio/               # Socket.IO setup and listeners
+        │   ├── listeners/
+        │   └── socket.io.server.ts
+        └── stripe/                 # Stripe payment configuration & service
+            ├── stripe.config.ts
+            └── stripe.service.ts
 ```
+
 
 ## 🏛️ Architecture Decisions
 
@@ -160,23 +176,29 @@ Route → Middleware → Controller → Service → Model
 
 | Package | Purpose |
 |---------|---------|
-| Express 5 | Web framework |
-| TypeScript | Type safety |
-| Zod | Runtime validation |
-| Pino | Structured logging |
-| JWT | Authentication |
-| bcrypt | Password hashing |
-| Helmet | Security headers |
-| CORS | Cross-origin handling |
-| express-rate-limit | Rate limiting |
-| Multer | File uploads |
-| Nodemailer | Email sending |
-| Socket.IO | Real-time communication |
-| node-cron | Scheduled tasks |
-| Cloudinary | Cloud image storage |
-| Stripe | Payment processing |
-| Redis | Caching & sessions |
-| AWS SDK | Cloud services |
+| Express 5 | Modern web framework |
+| TypeScript | Strict type safety |
+| Zod | Declarative schema validation & type inference |
+| Pino | Structured and high-performance logging |
+| JWT | JSON Web Token authentication |
+| bcrypt | Secure password hashing |
+| Helmet | Security headers protection |
+| CORS | Cross-origin resource sharing configuration |
+| express-rate-limit | API rate limiting protection |
+| Multer | Multipart file upload middleware |
+| Nodemailer | Transactional email transmission |
+| Socket.IO | Bi-directional, real-time events |
+| node-cron | Lightweight cron scheduler |
+| Cloudinary | Cloud-based media upload & optimization |
+| Stripe | Global payment processing gateway |
+| Paymob | Localized payment integration gateway |
+| Redis | In-memory data structures cache |
+| AWS SDK | Amazon S3 cloud storage integration |
+| Google Gemini AI | Advanced generative AI integration |
+| Firebase Admin SDK | Cross-platform push notifications |
+| Puppeteer | Headless browser automation & web scraping |
+| Fuse.js | Lightweight and powerful fuzzy searching |
+| i18n | Application-wide internationalization |
 
 ## 📜 License
 

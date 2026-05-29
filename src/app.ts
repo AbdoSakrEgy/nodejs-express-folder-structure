@@ -28,10 +28,6 @@ import userRoutes from "./modules/user/user.route.js";
  */
 
 const app = express();
-
-// ========================
-// Security Middleware
-// ========================
 app.use(helmet()); // Sets security-related HTTP headers
 app.use(
   cors({
@@ -42,35 +38,16 @@ app.use(
     maxAge: 86400, // Cache preflight for 24 hours
   }),
 );
-
-// ========================
-// Body Parsing
-// ========================
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// ========================
-// Rate Limiting
-// ========================
 app.use(limitRequests);
-
-// ========================
-// Request Logging
-// ========================
 app.use(logRequests);
 
-// ========================
-// API Routes
-// ========================
 const API_PREFIX = "/api/v1";
-
 app.use(`${API_PREFIX}/health`, healthRoutes);
 app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/users`, userRoutes);
 
-// ========================
-// Error Handling (must be after all routes)
-// ========================
 app.use(handleRouteNotFound);
 app.use(handleGlobalError);
 

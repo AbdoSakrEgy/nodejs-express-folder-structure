@@ -6,7 +6,7 @@ import { sendMessage } from "./listeners/chat.listener.js";
 // ======================= socketIOServer =======================
 export let ioServer: Server;
 
-const socketIoServer = (httpServer: httpServer) => {
+export const socketIoServer = (httpServer: httpServer) => {
   ioServer = new Server(httpServer, { cors: { origin: "*" } });
 
   ioServer.use((socket: any, next: any) => {
